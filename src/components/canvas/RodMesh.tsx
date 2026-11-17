@@ -8,16 +8,15 @@ import { useRodStore } from '../../store/useRodStore';
 
 interface RodMeshProps {
   rod: RodData;
-  onStartDrag: (rod: RodData, point: THREE.Vector3) => void;
+  onPointerDown: (rod: RodData, e: any) => void;
 }
 
-export const RodMesh: React.FC<RodMeshProps> = ({ rod, onStartDrag }) => {
+export const RodMesh: React.FC<RodMeshProps> = ({ rod, onPointerDown }) => {
   const selectedRodId = useRodStore((state) => state.selectedRodId);
   const unitRodId = useRodStore((state) => state.unitRodId);
   const isXRay = useRodStore((state) => state.isXRay);
   const showTicks = useRodStore((state) => state.showTicks);
   const explodeFactor = useRodStore((state) => state.explodeFactor);
-  const setSelectedRodId = useRodStore((state) => state.setSelectedRodId);
 
   const isSelected = selectedRodId === rod.id;
   const isUnitBase = unitRodId === rod.id;
@@ -57,13 +56,10 @@ export const RodMesh: React.FC<RodMeshProps> = ({ rod, onStartDrag }) => {
       const start = -spanX / 2;
       for (let i = 1; i < len; i++) {
         const x = start + i;
-        // 頂面線
         points.push(new THREE.Vector3(x, spanY / 2, -spanZ / 2));
         points.push(new THREE.Vector3(x, spanY / 2, spanZ / 2));
-        // 前側面線
         points.push(new THREE.Vector3(x, -spanY / 2, spanZ / 2));
         points.push(new THREE.Vector3(x, spanY / 2, spanZ / 2));
-        // 後側面線
         points.push(new THREE.Vector3(x, -spanY / 2, -spanZ / 2));
         points.push(new THREE.Vector3(x, spanY / 2, -spanZ / 2));
       }
@@ -77,7 +73,6 @@ export const RodMesh: React.FC<RodMeshProps> = ({ rod, onStartDrag }) => {
         points.push(new THREE.Vector3(-spanX / 2, y, -spanZ / 2));
       }
     } else {
-      // 'Z'
       const start = -spanZ / 2;
       for (let i = 1; i < len; i++) {
         const z = start + i;
@@ -90,62 +85,40 @@ export const RodMesh: React.FC<RodMeshProps> = ({ rod, onStartDrag }) => {
       }
     }
 
-    const geom = new THREE.BufferGeometry().setFromPoints(points);
-    return geom;
+    return new THREE.BufferGeometry().setFromPoints(points);
   }, [rod.length, rod.orientation, rod.isMystery, spanX, spanY, spanZ]);
 
-  // 材質設定（規則 2：盲盒強制不受 X 光影響）
-  const materialProps = useMemo(() => {
-    if (rod.isMystery) {
-      return {
-        color: MYSTERY_COLOR,
-        map: mysteryTexture,
-        roughness: 0.35,
-        metalness: 0.15,
-        transparent: false,
-        opacity: 1.0,
-        depthWrite: true,
-      };
-    }
-
-    if (isXRay) {
-      return {
-        color: config.color,
-        roughness: 0.2,
-        metalness: 0.1,
-        transparent: true,
-        opacity: 0.45,
-        depthWrite: false,
-      };
-    }
-
-    return {
-      color: config.color,
-      roughness: 0.3,
-      metalness: 0.1,
-      transparent: false,
-      opacity: 1.0,
-      depthWrite: true,
-    };
-  }, [rod.isMystery, isXRay, config.color, mysteryTexture]);
+  const isTranslucent = !rod.isMystery && isXRay;
 
   return (
-    <group
-      position={[visualX, visualY, visualZ]}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        setSelectedRodId(rod.id);
-        onStartDrag(rod, e.point);
-      }}
-    >
-      {/* 方塊實體 */}
-      <mesh castShadow receiveShadow>
+    <group position={[visualX, visualY, visualZ]}>
+      {/* 
+        點擊判定專屬於實體立方體，userData 綁定 rodId 供射線穿透判定。
+        使用 key 強制在 X光模式切換時完整重建材質與管線，確保透明深度緩衝生效！
+      */}
+      <mesh
+        castShadow={!isTranslucent}
+        receiveShadow
+        userData={{ rodId: rod.id }}
+        onPointerDown={(e) => onPointerDown(rod, e)}
+      >
         <boxGeometry args={[spanX * 0.99, spanY * 0.99, spanZ * 0.99]} />
-        <meshStandardMaterial {...materialProps} />
+        <meshStandardMaterial
+          key={rod.isMystery ? 'mystery' : isTranslucent ? 'xray-mat' : 'solid-mat'}
+          color={rod.isMystery ? MYSTERY_COLOR : config.color}
+          map={rod.isMystery ? mysteryTexture : null}
+          transparent={isTranslucent}
+          opacity={isTranslucent ? 0.3 : 1.0}
+          depthWrite={!isTranslucent}
+          depthTest={true}
+          side={isTranslucent ? THREE.DoubleSide : THREE.FrontSide}
+          roughness={isTranslucent ? 0.1 : 0.3}
+          metalness={isTranslucent ? 0.05 : 0.1}
+        />
       </mesh>
 
-      {/* 外輪廓邊緣線 */}
-      <lineSegments geometry={edgesGeometry}>
+      {/* 外輪廓邊緣線：在 X 光模式下關閉 depthTest，線條貫穿顯示透視積木結構！ */}
+      <lineSegments geometry={edgesGeometry} raycast={() => null}>
         <lineBasicMaterial
           color={
             isUnitBase
@@ -154,22 +127,36 @@ export const RodMesh: React.FC<RodMeshProps> = ({ rod, onStartDrag }) => {
               ? '#38BDF8'
               : rod.isMystery
               ? '#64748B'
+              : isTranslucent
+              ? '#38BDF8'
               : '#0F172A'
           }
           linewidth={isSelected || isUnitBase ? 2 : 1}
+          depthTest={!isTranslucent}
+          transparent={isTranslucent}
+          opacity={isTranslucent ? 0.9 : 1.0}
         />
       </lineSegments>
 
-      {/* 單位刻度線（盲盒時隱藏） */}
+      {/* 單位刻度線（盲盒時隱藏，X光時深度穿透以利內部清點） */}
       {showTicks && !rod.isMystery && tickLinesGeometry && (
-        <lineSegments geometry={tickLinesGeometry}>
-          <lineBasicMaterial color={config.tickColor} />
+        <lineSegments geometry={tickLinesGeometry} raycast={() => null}>
+          <lineBasicMaterial
+            color={config.tickColor}
+            depthTest={!isTranslucent}
+            transparent={isTranslucent}
+            opacity={isTranslucent ? 0.8 : 1.0}
+          />
         </lineSegments>
       )}
 
       {/* 基準單位 1 標記環 */}
       {isUnitBase && (
-        <mesh position={[0, spanY / 2 + 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh
+          position={[0, spanY / 2 + 0.15, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          raycast={() => null}
+        >
           <ringGeometry args={[0.3, 0.45, 32]} />
           <meshBasicMaterial color="#F59E0B" side={THREE.DoubleSide} />
         </mesh>

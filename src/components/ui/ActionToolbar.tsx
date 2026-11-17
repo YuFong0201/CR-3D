@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRodStore } from '../../store/useRodStore';
 import { ROD_CONFIGS } from '../../constants/rods';
+import { getRodBounds } from '../../utils/gridMath';
 import {
   RotateCw,
   Trash2,
@@ -10,6 +11,8 @@ import {
   Eye,
   Eraser,
   X,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 export const ActionToolbar: React.FC = () => {
@@ -23,6 +26,8 @@ export const ActionToolbar: React.FC = () => {
   const deleteRod = useRodStore((state) => state.deleteRod);
   const clearAllRods = useRodStore((state) => state.clearAllRods);
   const setSelectedRodId = useRodStore((state) => state.setSelectedRodId);
+  const selectRodAbove = useRodStore((state) => state.selectRodAbove);
+  const selectRodBelow = useRodStore((state) => state.selectRodBelow);
   const setUnitRodId = useRodStore((state) => state.setUnitRodId);
   const revealMystery = useRodStore((state) => state.revealMystery);
   const revealAllMysteries = useRodStore((state) => state.revealAllMysteries);
@@ -34,11 +39,45 @@ export const ActionToolbar: React.FC = () => {
   const canUndo = past.length > 0;
   const canRedo = future.length > 0;
 
+  // 計算選中方塊上方與下方的重疊堆疊方塊
+  const currentBounds = selectedRod ? getRodBounds(selectedRod) : null;
+  const rodsAbove = selectedRod
+    ? rods
+        .filter((r) => {
+          if (r.id === selectedRod.id || r.gridPos.y <= selectedRod.gridPos.y) return false;
+          const b = getRodBounds(r);
+          return (
+            currentBounds!.minX <= b.maxX &&
+            currentBounds!.maxX >= b.minX &&
+            currentBounds!.minZ <= b.maxZ &&
+            currentBounds!.maxZ >= b.minZ
+          );
+        })
+        .sort((a, b) => a.gridPos.y - b.gridPos.y)
+    : [];
+
+  const rodsBelow = selectedRod
+    ? rods
+        .filter((r) => {
+          if (r.id === selectedRod.id || r.gridPos.y >= selectedRod.gridPos.y) return false;
+          const b = getRodBounds(r);
+          return (
+            currentBounds!.minX <= b.maxX &&
+            currentBounds!.maxX >= b.minX &&
+            currentBounds!.minZ <= b.maxZ &&
+            currentBounds!.maxZ >= b.minZ
+          );
+        })
+        .sort((a, b) => b.gridPos.y - a.gridPos.y)
+    : [];
+
+  const hasStack = rodsAbove.length > 0 || rodsBelow.length > 0;
+
   return (
     <div className="flex flex-col items-center gap-2 pointer-events-none select-none px-3">
       {/* 選中方塊專屬操作列 */}
       {selectedRod && (
-        <div className="bg-slate-900/95 backdrop-blur-md border border-sky-500/60 rounded-xl shadow-xl px-3 py-2 flex items-center gap-2 pointer-events-auto animate-fade-in text-white">
+        <div className="bg-slate-900/95 backdrop-blur-md border border-sky-500/60 rounded-xl shadow-xl px-3 py-2 flex items-center gap-2 pointer-events-auto animate-fade-in text-white flex-wrap justify-center">
           <div className="flex items-center gap-2 pr-2 border-r border-slate-700">
             <span
               className="w-3.5 h-3.5 rounded-full inline-block border border-white/40"
@@ -56,7 +95,35 @@ export const ActionToolbar: React.FC = () => {
             <span className="text-xs text-slate-400">
               方向: {selectedRod.orientation}
             </span>
+            {hasStack && (
+              <span className="text-[11px] text-amber-300 font-bold bg-amber-950/80 px-2 py-0.5 rounded border border-amber-600/40">
+                第 {rodsBelow.length + 1} 層 / 共 {rodsBelow.length + rodsAbove.length + 1} 層
+              </span>
+            )}
           </div>
+
+          {/* 堆疊層級直接切換按鈕（解決上方方塊遮擋無法點選下方方塊） */}
+          {rodsBelow.length > 0 && (
+            <button
+              onClick={selectRodBelow}
+              title="選取正下方的方塊"
+              className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-xs sm:text-sm font-bold shadow-md transition-all text-white"
+            >
+              <ArrowDown className="w-4 h-4" />
+              <span>選下層</span>
+            </button>
+          )}
+
+          {rodsAbove.length > 0 && (
+            <button
+              onClick={selectRodAbove}
+              title="選取正上方的方塊"
+              className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-xs sm:text-sm font-bold shadow-md transition-all text-white"
+            >
+              <ArrowUp className="w-4 h-4" />
+              <span>選上層</span>
+            </button>
+          )}
 
           {/* 旋轉 90° */}
           <button

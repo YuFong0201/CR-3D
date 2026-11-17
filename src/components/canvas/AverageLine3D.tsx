@@ -19,7 +19,7 @@ export const AverageLine3D: React.FC = () => {
   const lineEndX = Math.max(BOARD_MAX, stats.maxActiveX + 2);
 
   return (
-    <group>
+    <group raycast={() => null}>
       {/* 水平雷射虛線主體 */}
       <line>
         <bufferGeometry
@@ -40,8 +40,8 @@ export const AverageLine3D: React.FC = () => {
         />
       </line>
 
-      {/* 半透明雷射參考切面 */}
-      <mesh position={[0, avgY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* 半透明雷射參考切面（不阻擋下方方塊點選） */}
+      <mesh position={[0, avgY, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
         <planeGeometry args={[lineEndX - lineStartX, 4]} />
         <meshBasicMaterial
           color="#0284C7"

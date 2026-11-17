@@ -23,11 +23,9 @@ const CameraController: React.FC<{ view: CameraView }> = ({ view }) => {
       camera.position.set(15, 18, 22);
       controlsRef.current.target.set(0, 2, 0);
     } else if (view === 'top') {
-      // 俯視 (X-Z 平面)
       camera.position.set(0, 30, 0.001);
       controlsRef.current.target.set(0, 0, 0);
     } else if (view === 'front') {
-      // 正視 (X-Y 平面)
       camera.position.set(0, 5, 28);
       controlsRef.current.target.set(0, 4, 0);
     }
@@ -60,32 +58,61 @@ const SceneContent: React.FC = () => {
   const setGhost = useRodStore((state) => state.setGhost);
   const setIsDragging = useRodStore((state) => state.setIsDragging);
   const setExplodeFactor = useRodStore((state) => state.setExplodeFactor);
+  const setSelectedRodId = useRodStore((state) => state.setSelectedRodId);
+  const cycleSelect = useRodStore((state) => state.cycleSelect);
 
-  // 暫存拖曳中的方塊與抓取偏移值
+  // 暫存拖曳中的方塊與計算基準
   const draggingRodRef = useRef<RodData | null>(null);
-  const grabOffsetRef = useRef<{ x: number; z: number }>({ x: 0, z: 0 });
+  const dragStartHitRef = useRef<THREE.Vector3>(new THREE.Vector3());
+  const dragStartGridRef = useRef<{ x: number; z: number }>({ x: 0, z: 0 });
+  const dragPlaneYRef = useRef<number>(0);
 
-  const handleStartDrag = (rod: RodData, hitPoint: THREE.Vector3) => {
-    // 規則 1：炸開模式一旦點擊拖曳，自動將 explodeFactor 歸零
+  const handleRodPointerDown = (clickedRod: RodData, e: any) => {
+    e.stopPropagation();
+
+    // 1. 取得這條射線上擊中的所有方塊 ID（由近到遠排序）
+    const hitRodIds: string[] = [];
+    if (e.intersections && e.intersections.length > 0) {
+      for (const hit of e.intersections) {
+        const id = hit.object?.userData?.rodId;
+        if (id && !hitRodIds.includes(id)) {
+          hitRodIds.push(id);
+        }
+      }
+    }
+    if (!hitRodIds.includes(clickedRod.id)) {
+      hitRodIds.unshift(clickedRod.id);
+    }
+
+    // 2. 穿透循環選取（Cycle Selection）：
+    // 若點擊處有多個方塊疊合，點擊會在堆疊中的方塊之間循環選取
+    const targetId = cycleSelect(hitRodIds) || clickedRod.id;
+    const targetRod = rods.find((r) => r.id === targetId) || clickedRod;
+
+    // 3. 設定拖曳基準
     setExplodeFactor(0);
-
-    draggingRodRef.current = rod;
-    grabOffsetRef.current = {
-      x: rod.gridPos.x - hitPoint.x,
-      z: rod.gridPos.z - hitPoint.z,
-    };
+    draggingRodRef.current = targetRod;
+    // 將拖曳參考面精準對齊到點擊時的 3D 空間高度，防止換面時座標瞬間跳動
+    dragPlaneYRef.current = e.point.y;
+    dragStartHitRef.current.copy(e.point);
+    dragStartGridRef.current = { x: targetRod.gridPos.x, z: targetRod.gridPos.z };
 
     setIsDragging(true);
 
-    const clamped = clampGridPosition(rod.gridPos.x, rod.gridPos.z, rod.length, rod.orientation);
-    const otherRods = rods.filter((r) => r.id !== rod.id);
-    const targetY = calculateStackHeight(rod, clamped.x, clamped.z, otherRods);
+    const clamped = clampGridPosition(
+      targetRod.gridPos.x,
+      targetRod.gridPos.z,
+      targetRod.length,
+      targetRod.orientation
+    );
+    const otherRods = rods.filter((r) => r.id !== targetRod.id);
+    const targetY = calculateStackHeight(targetRod, clamped.x, clamped.z, otherRods);
 
     setGhost({
       active: true,
-      rodId: rod.id,
-      length: rod.length,
-      orientation: rod.orientation,
+      rodId: targetRod.id,
+      length: targetRod.length,
+      orientation: targetRod.orientation,
       targetPos: { x: clamped.x, y: targetY, z: clamped.z },
       isValid: true,
     });
@@ -96,12 +123,17 @@ const SceneContent: React.FC = () => {
     e.stopPropagation();
 
     const rod = draggingRodRef.current;
-    const hitPoint = e.point;
+    const currentHit = e.point;
 
-    const rawTargetX = hitPoint.x + grabOffsetRef.current.x;
-    const rawTargetZ = hitPoint.z + grabOffsetRef.current.z;
+    // 4. 計算滑鼠在拖曳平面上的位移增量
+    const deltaX = currentHit.x - dragStartHitRef.current.x;
+    const deltaZ = currentHit.z - dragStartHitRef.current.z;
 
-    const clamped = clampGridPosition(rawTargetX, rawTargetZ, rod.length, rod.orientation);
+    // 根據抓取基準加上整數網格位移
+    const targetGridX = Math.round(dragStartGridRef.current.x + deltaX);
+    const targetGridZ = Math.round(dragStartGridRef.current.z + deltaZ);
+
+    const clamped = clampGridPosition(targetGridX, targetGridZ, rod.length, rod.orientation);
     const otherRods = rods.filter((r) => r.id !== rod.id);
     const targetY = calculateStackHeight(rod, clamped.x, clamped.z, otherRods);
 
@@ -115,7 +147,8 @@ const SceneContent: React.FC = () => {
     });
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e?: any) => {
+    if (e) e.stopPropagation();
     if (isDragging && draggingRodRef.current && ghost.active) {
       updateRodPosition(
         draggingRodRef.current.id,
@@ -147,12 +180,12 @@ const SceneContent: React.FC = () => {
       />
       <directionalLight position={[-10, 15, -10]} intensity={0.4} />
 
-      {/* 網格基座與拖曳接收底板 */}
-      <GridBoard onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} />
+      {/* 網格基座：點擊空白處可取消選取 */}
+      <GridBoard onFloorPointerDown={() => setSelectedRodId(null)} />
 
-      {/* 所有方塊渲染 */}
+      {/* 所有方塊渲染（點擊判定專屬各方塊圖形幾何） */}
       {rods.map((rod) => (
-        <RodMesh key={rod.id} rod={rod} onStartDrag={handleStartDrag} />
+        <RodMesh key={rod.id} rod={rod} onPointerDown={handleRodPointerDown} />
       ))}
 
       {/* 半透明落點預覽 */}
@@ -163,6 +196,22 @@ const SceneContent: React.FC = () => {
 
       {/* 平均數教學水平雷射線 */}
       <AverageLine3D />
+
+      {/* 
+        動態拖曳捕獲平面：僅在 isDragging===true 時存在於場景中，
+        高度精確對齊抓取點 Y，拖曳結束後自動消失，完全不干擾平時的方塊點選！
+      */}
+      {isDragging && (
+        <mesh
+          position={[0, dragPlaneYRef.current, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          <planeGeometry args={[200, 200]} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+      )}
     </>
   );
 };

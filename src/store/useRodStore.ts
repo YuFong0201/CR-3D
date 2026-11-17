@@ -5,6 +5,7 @@ import {
   calculateStackHeight,
   resolveGravityForAllRods,
   findAvailablePosition,
+  getRodBounds,
 } from '../utils/gridMath';
 
 const MAX_HISTORY = 30;
@@ -37,6 +38,9 @@ interface RodStoreState {
   deleteRod: (id: string) => void;
   clearAllRods: () => void;
   setSelectedRodId: (id: string | null) => void;
+  selectRodAbove: () => void;
+  selectRodBelow: () => void;
+  cycleSelect: (intersectedIds: string[]) => string | null;
   setUnitRodId: (id: string | null) => void;
   revealMystery: (id: string) => void;
   revealAllMysteries: () => void;
@@ -197,6 +201,67 @@ export const useRodStore = create<RodStoreState>((set, get) => ({
 
   setSelectedRodId: (id: string | null) => {
     set({ selectedRodId: id });
+  },
+
+  selectRodAbove: () => {
+    const { rods, selectedRodId } = get();
+    if (!selectedRodId) return;
+    const current = rods.find((r) => r.id === selectedRodId);
+    if (!current) return;
+    const currentBounds = getRodBounds(current);
+
+    const aboveRods = rods
+      .filter((r) => {
+        if (r.id === current.id || r.gridPos.y <= current.gridPos.y) return false;
+        const b = getRodBounds(r);
+        const overlapX = currentBounds.minX <= b.maxX && currentBounds.maxX >= b.minX;
+        const overlapZ = currentBounds.minZ <= b.maxZ && currentBounds.maxZ >= b.minZ;
+        return overlapX && overlapZ;
+      })
+      .sort((a, b) => a.gridPos.y - b.gridPos.y);
+
+    if (aboveRods.length > 0) {
+      set({ selectedRodId: aboveRods[0].id });
+    }
+  },
+
+  selectRodBelow: () => {
+    const { rods, selectedRodId } = get();
+    if (!selectedRodId) return;
+    const current = rods.find((r) => r.id === selectedRodId);
+    if (!current) return;
+    const currentBounds = getRodBounds(current);
+
+    const belowRods = rods
+      .filter((r) => {
+        if (r.id === current.id || r.gridPos.y >= current.gridPos.y) return false;
+        const b = getRodBounds(r);
+        const overlapX = currentBounds.minX <= b.maxX && currentBounds.maxX >= b.minX;
+        const overlapZ = currentBounds.minZ <= b.maxZ && currentBounds.maxZ >= b.minZ;
+        return overlapX && overlapZ;
+      })
+      .sort((a, b) => b.gridPos.y - a.gridPos.y);
+
+    if (belowRods.length > 0) {
+      set({ selectedRodId: belowRods[0].id });
+    }
+  },
+
+  cycleSelect: (intersectedIds: string[]) => {
+    if (!intersectedIds || intersectedIds.length === 0) {
+      set({ selectedRodId: null });
+      return null;
+    }
+    const { selectedRodId } = get();
+    let nextId = intersectedIds[0];
+
+    if (selectedRodId && intersectedIds.includes(selectedRodId)) {
+      const idx = intersectedIds.indexOf(selectedRodId);
+      nextId = intersectedIds[(idx + 1) % intersectedIds.length];
+    }
+
+    set({ selectedRodId: nextId });
+    return nextId;
   },
 
   setUnitRodId: (id: string | null) => {

@@ -20,8 +20,8 @@ export const GhostPreview: React.FC = () => {
 
   return (
     <group position={[posX, posY, posZ]}>
-      {/* 半透明落點實體盒 */}
-      <mesh>
+      {/* 半透明落點實體盒（完全不參與射線判定） */}
+      <mesh raycast={() => null}>
         <boxGeometry args={[spanX * 0.98, spanY * 0.98, spanZ * 0.98]} />
         <meshStandardMaterial
           color={ghost.isValid ? '#22C55E' : '#EF4444'}
@@ -33,7 +33,7 @@ export const GhostPreview: React.FC = () => {
       </mesh>
 
       {/* 外框線標示 */}
-      <lineSegments geometry={edgesGeometry}>
+      <lineSegments geometry={edgesGeometry} raycast={() => null}>
         <lineBasicMaterial color={ghost.isValid ? '#4ADE80' : '#F87171'} />
       </lineSegments>
     </group>
