@@ -1,0 +1,59 @@
+import React from 'react';
+import { SceneCanvas } from './components/canvas/SceneCanvas';
+import { BottomDock } from './components/ui/BottomDock';
+import { ActionToolbar } from './components/ui/ActionToolbar';
+import { ModeSwitcher } from './components/ui/ModeSwitcher';
+import { useRodStore } from './store/useRodStore';
+import { Info } from 'lucide-react';
+
+export const App: React.FC = () => {
+  const teachingMode = useRodStore((state) => state.teachingMode);
+
+  const getModeHint = () => {
+    switch (teachingMode) {
+      case 'fraction':
+        return '分數尺規模式：點選任意積木並設為「基準單位 1」，系統即時換算顯示帶分數與假分數。';
+      case 'stats':
+        return '平均數統計模式：即時計算各欄位高度與平均水平虛線，進行「移多補少」等高教學。';
+      case 'free':
+      default:
+        return '數與量自由模式：由底部選取 1~10 單位積木生成，單指拖曳磁吸堆疊，點選可旋轉 90°。';
+    }
+  };
+
+  return (
+    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 flex flex-col font-sans select-none">
+      {/* 頂部標題與教學指引列 */}
+      <header className="absolute top-3 left-3 z-20 pointer-events-none select-none max-w-[calc(100vw-360px)]">
+        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 px-4 py-2.5 rounded-2xl shadow-xl flex flex-col gap-1 pointer-events-auto">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-gradient-to-tr from-amber-400 to-rose-500 shadow-sm" />
+            <h1 className="text-sm sm:text-base font-black text-white tracking-wide">
+              線上 3D 古氏方塊國小數學教學系統
+            </h1>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-300 font-medium">
+            <Info className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
+            <span className="truncate">{getModeHint()}</span>
+          </div>
+        </div>
+      </header>
+
+      {/* 右上角切換器面板 */}
+      <ModeSwitcher />
+
+      {/* 主 3D 畫布區域 */}
+      <main className="flex-1 w-full h-full relative">
+        <SceneCanvas />
+      </main>
+
+      {/* 底部浮動操作區 (選取動作條 + 1~10 方塊生成盤) */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col items-center gap-2 pointer-events-none">
+        <ActionToolbar />
+        <BottomDock />
+      </div>
+    </div>
+  );
+};
+
+export default App;
