@@ -11,8 +11,8 @@ export interface FractionResult {
 
 /**
  * 計算長度相對於基準單位的假分數與帶分數表達式
- * @param rodLength 當前方塊長度
- * @param unitLength 基準方塊長度（預設為 1）
+ * @param rodLength 當前積木長度
+ * @param unitLength 基準積木長度（預設為 1）
  */
 export function calculateFraction(rodLength: number, unitLength: number): FractionResult {
   if (unitLength <= 0) {

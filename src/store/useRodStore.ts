@@ -11,7 +11,7 @@ import {
 const MAX_HISTORY = 30;
 
 interface RodStoreState {
-  // 方塊資料與選取
+  // 積木資料與選取
   rods: RodData[];
   selectedRodId: string | null;
   unitRodId: string | null;

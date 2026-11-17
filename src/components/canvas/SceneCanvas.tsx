@@ -38,7 +38,7 @@ const CameraController: React.FC<{ view: CameraView }> = ({ view }) => {
     <OrbitControls
       ref={controlsRef}
       makeDefault
-      enabled={!isDragging} // 拖曳方塊時鎖定視角，防止白板手勢干擾
+      enabled={!isDragging} // 拖曳積木時鎖定視角，防止白板手勢干擾
       enableDamping
       dampingFactor={0.08}
       maxPolarAngle={view === 'top' ? 0.01 : Math.PI / 2 - 0.05} // 防止視角穿透地表
@@ -61,7 +61,7 @@ const SceneContent: React.FC = () => {
   const setSelectedRodId = useRodStore((state) => state.setSelectedRodId);
   const cycleSelect = useRodStore((state) => state.cycleSelect);
 
-  // 暫存拖曳中的方塊與計算基準
+  // 暫存拖曳中的積木與計算基準
   const draggingRodRef = useRef<RodData | null>(null);
   const dragStartHitRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const dragStartGridRef = useRef<{ x: number; z: number }>({ x: 0, z: 0 });
@@ -70,7 +70,7 @@ const SceneContent: React.FC = () => {
   const handleRodPointerDown = (clickedRod: RodData, e: any) => {
     e.stopPropagation();
 
-    // 1. 取得這條射線上擊中的所有方塊 ID（由近到遠排序）
+    // 1. 取得這條射線上擊中的所有積木 ID（由近到遠排序）
     const hitRodIds: string[] = [];
     if (e.intersections && e.intersections.length > 0) {
       for (const hit of e.intersections) {
@@ -85,7 +85,7 @@ const SceneContent: React.FC = () => {
     }
 
     // 2. 穿透循環選取（Cycle Selection）：
-    // 若點擊處有多個方塊疊合，點擊會在堆疊中的方塊之間循環選取
+    // 若點擊處有多個積木疊合，點擊會在堆疊中的積木之間循環選取
     const targetId = cycleSelect(hitRodIds) || clickedRod.id;
     const targetRod = rods.find((r) => r.id === targetId) || clickedRod;
 
@@ -183,7 +183,7 @@ const SceneContent: React.FC = () => {
       {/* 網格基座：點擊空白處可取消選取 */}
       <GridBoard onFloorPointerDown={() => setSelectedRodId(null)} />
 
-      {/* 所有方塊渲染（點擊判定專屬各方塊圖形幾何） */}
+      {/* 所有積木渲染（點擊判定專屬各積木圖形幾何） */}
       {rods.map((rod) => (
         <RodMesh key={rod.id} rod={rod} onPointerDown={handleRodPointerDown} />
       ))}
@@ -199,7 +199,7 @@ const SceneContent: React.FC = () => {
 
       {/* 
         動態拖曳捕獲平面：僅在 isDragging===true 時存在於場景中，
-        高度精確對齊抓取點 Y，拖曳結束後自動消失，完全不干擾平時的方塊點選！
+        高度精確對齊抓取點 Y，拖曳結束後自動消失，完全不干擾平時的積木點選！
       */}
       {isDragging && (
         <mesh

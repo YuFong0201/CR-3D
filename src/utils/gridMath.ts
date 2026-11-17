@@ -11,7 +11,7 @@ export function getRodSpans(length: number, orientation: Orientation) {
 
 /**
  * 動態邊界夾緊（Dynamic Clamping）：
- * 計算最大容許基準點時扣除方塊該軸向跨度，確保整根方塊完整留在底板內
+ * 計算最大容許基準點時扣除積木該軸向跨度，確保整根積木完整留在底板內
  */
 export function clampGridPosition(x: number, z: number, length: number, orientation: Orientation) {
   const { spanX, spanZ } = getRodSpans(length, orientation);
@@ -34,7 +34,7 @@ export function getRodBounds(rod: RodData, overrideX = rod.gridPos.x, overrideZ 
 }
 
 /**
- * 計算方塊放置於目標 (targetX, targetZ) 時應堆疊的高度（y）
+ * 計算積木放置於目標 (targetX, targetZ) 時應堆疊的高度（y）
  */
 export function calculateStackHeight(
   movingRod: RodData,
@@ -79,7 +79,7 @@ export function resolveGravityForAllRods(rods: RodData[]): RodData[] {
 }
 
 /**
- * 自動尋找適合生成新方塊的位置（依序在 z=0, z=1, ... 尋找不與現有同高度重疊的起始點）
+ * 自動尋找適合生成新積木的位置（依序在 z=0, z=1, ... 尋找不與現有同高度重疊的起始點）
  */
 export function findAvailablePosition(
   length: number,

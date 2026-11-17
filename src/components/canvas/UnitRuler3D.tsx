@@ -18,7 +18,7 @@ export const UnitRuler3D: React.FC = () => {
 
   return (
     <group>
-      {/* 遍歷各方塊顯示懸浮分數標籤 */}
+      {/* 遍歷各積木顯示懸浮分數標籤 */}
       {rods.map((rod) => {
         if (rod.isMystery) return null; // 盲盒不顯示分數標籤
 

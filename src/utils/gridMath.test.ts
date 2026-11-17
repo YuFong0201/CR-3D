@@ -10,8 +10,8 @@ import { RodData } from '../types/rod.types';
 import { BOARD_MAX, BOARD_MIN } from '../constants/rods';
 
 describe('核心數學引擎與演算法測試', () => {
-  // 1. 邊界夾緊（長度 10 方塊不超界）
-  it('1. clampGridPosition: 長度為 10 的方塊在 x=8 時應被動態夾緊至最大容許位置', () => {
+  // 1. 邊界夾緊（長度 10 積木不超界）
+  it('1. clampGridPosition: 長度為 10 的積木在 x=8 時應被動態夾緊至最大容許位置', () => {
     // BOARD_MAX = 10, length = 10, orientation = 'X', spanX = 10
     // maxX 容許值 = BOARD_MAX - spanX + 1 = 10 - 10 + 1 = 1
     const clamped = clampGridPosition(8, 0, 10, 'X');
@@ -28,7 +28,7 @@ describe('核心數學引擎與演算法測試', () => {
   });
 
   // 3. 跨格重疊堆疊（AABB 投影完全重疊）
-  it('3. calculateStackHeight: 方塊完全重疊時高度應自動疊加 (y = 1)', () => {
+  it('3. calculateStackHeight: 積木完全重疊時高度應自動疊加 (y = 1)', () => {
     const bottomRod: RodData = {
       id: 'rod-1',
       length: 4,
@@ -47,7 +47,7 @@ describe('核心數學引擎與演算法測試', () => {
   });
 
   // 4. 部分重疊堆疊（X 軸交叉重疊）
-  it('4. calculateStackHeight: 方塊部分交叉重疊時應準確計算最高堆疊高度', () => {
+  it('4. calculateStackHeight: 積木部分交叉重疊時應準確計算最高堆疊高度', () => {
     // bottomRod: x 從 0 到 3, y=0, z=0
     const bottomRod: RodData = {
       id: 'rod-1',
@@ -68,7 +68,7 @@ describe('核心數學引擎與演算法測試', () => {
   });
 
   // 5. 無重疊情況高度為 0
-  it('5. calculateStackHeight: 無投影重疊時方塊高度應保持在地面 y = 0', () => {
+  it('5. calculateStackHeight: 無投影重疊時積木高度應保持在地面 y = 0', () => {
     const rod1: RodData = {
       id: 'rod-1',
       length: 3,
@@ -86,8 +86,8 @@ describe('核心數學引擎與演算法測試', () => {
     expect(targetY).toBe(0);
   });
 
-  // 6. 抽走底層方塊重力落實（全場下墜）
-  it('6. resolveGravityForAllRods: 抽走底層方塊後，浮空方塊應自動下墜至地面或下方積木', () => {
+  // 6. 抽走底層積木重力落實（全場下墜）
+  it('6. resolveGravityForAllRods: 抽走底層積木後，浮空積木應自動下墜至地面或下方積木', () => {
     // 假設原本有 rod-1 (y=0), rod-2 (y=1), rod-3 (y=2)
     // 抽走 rod-1 後，rod-2 應墜落至 y=0，rod-3 墜落至 y=1
     const floatingRods: RodData[] = [

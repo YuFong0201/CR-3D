@@ -39,7 +39,7 @@ export const ActionToolbar: React.FC = () => {
   const canUndo = past.length > 0;
   const canRedo = future.length > 0;
 
-  // 計算選中方塊上方與下方的重疊堆疊方塊
+  // 計算選中積木上方與下方的重疊堆疊積木
   const currentBounds = selectedRod ? getRodBounds(selectedRod) : null;
   const rodsAbove = selectedRod
     ? rods
@@ -75,7 +75,7 @@ export const ActionToolbar: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center gap-2 pointer-events-none select-none px-3">
-      {/* 選中方塊專屬操作列 */}
+      {/* 選中積木專屬操作列 */}
       {selectedRod && (
         <div className="bg-slate-900/95 backdrop-blur-md border border-sky-500/60 rounded-xl shadow-xl px-3 py-2 flex items-center gap-2 pointer-events-auto animate-fade-in text-white flex-wrap justify-center">
           <div className="flex items-center gap-2 pr-2 border-r border-slate-700">
@@ -102,11 +102,11 @@ export const ActionToolbar: React.FC = () => {
             )}
           </div>
 
-          {/* 堆疊層級直接切換按鈕（解決上方方塊遮擋無法點選下方方塊） */}
+          {/* 堆疊層級直接切換按鈕（解決上方積木遮擋無法點選下方積木） */}
           {rodsBelow.length > 0 && (
             <button
               onClick={selectRodBelow}
-              title="選取正下方的方塊"
+              title="選取正下方的積木"
               className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-xs sm:text-sm font-bold shadow-md transition-all text-white"
             >
               <ArrowDown className="w-4 h-4" />
@@ -117,7 +117,7 @@ export const ActionToolbar: React.FC = () => {
           {rodsAbove.length > 0 && (
             <button
               onClick={selectRodAbove}
-              title="選取正上方的方塊"
+              title="選取正上方的積木"
               className="flex items-center gap-1 px-2.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-xs sm:text-sm font-bold shadow-md transition-all text-white"
             >
               <ArrowUp className="w-4 h-4" />
@@ -138,7 +138,7 @@ export const ActionToolbar: React.FC = () => {
           {/* 設為基準單位 1 */}
           <button
             onClick={() => setUnitRodId(selectedRod.id)}
-            title="設定此方塊為基準單位 1 (計算分數比率)"
+            title="設定此積木為基準單位 1 (計算分數比率)"
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 ${
               unitRodId === selectedRod.id
                 ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 ring-2 ring-amber-300'
@@ -161,10 +161,10 @@ export const ActionToolbar: React.FC = () => {
             </button>
           )}
 
-          {/* 刪除方塊 */}
+          {/* 刪除積木 */}
           <button
             onClick={() => deleteRod(selectedRod.id)}
-            title="刪除此方塊"
+            title="刪除此積木"
             className="p-2 rounded-lg bg-rose-600/80 hover:bg-rose-500 active:scale-95 text-white transition-all shadow-md"
           >
             <Trash2 className="w-4 h-4" />
@@ -227,12 +227,12 @@ export const ActionToolbar: React.FC = () => {
         <button
           onClick={() => {
             if (rods.length === 0) return;
-            if (window.confirm('確定要清空場上所有古氏方塊嗎？')) {
+            if (window.confirm('確定要清空場上所有古氏積木嗎？')) {
               clearAllRods();
             }
           }}
           disabled={rods.length === 0}
-          title="清空全場方塊"
+          title="清空全場積木"
           className={`p-2 rounded-lg flex items-center gap-1 text-xs font-semibold transition-all ${
             rods.length > 0
               ? 'text-rose-400 hover:bg-rose-950/50 hover:text-rose-300 active:scale-95'
